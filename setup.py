@@ -26,7 +26,7 @@ APP = ["main.py"]
 DATA_FILES: list = []
 OPTIONS = {
     "argv_emulation": False,
-    "packages": ["predict_app"],
+    "packages": ["predict_app", "customtkinter", "darkdetect"],
     "includes": ["tkinter"],
     "resources": COEFF_FILES,
     "plist": {

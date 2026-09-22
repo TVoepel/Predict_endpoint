@@ -65,7 +65,7 @@ fi
 source .venv/bin/activate
 
 pip install --upgrade pip >/dev/null
-pip install -r requirements-build.txt
+pip install -r requirements.txt -r requirements-build.txt
 
 rm -rf build dist
 python setup.py py2app

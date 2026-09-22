@@ -1,6 +1,8 @@
 # Predict Endpoint
 
-macOS-App mit grafischer Oberfläche für die Vorhersage-Auswertung von Messdateien.
+macOS-App mit grafischer Oberfläche im iOS-Stil für die Vorhersage-Auswertung
+von Messdateien. Die Oberfläche nutzt [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter)
+(abgerundete Karten, System-Akzentfarbe, helles und dunkles Erscheinungsbild).
 Die App bündelt die drei bisherigen Skripte
 (`coeff_calc_batch_predict_project.py`, `extract_all_predict_lines_sorted.py`,
 `extract_first_lines.py`) hinter vier Schaltflächen:
@@ -50,8 +52,12 @@ Rechtsklick auf die App → „Öffnen“.
 ## Ohne Build starten
 
 ```bash
+python3 -m pip install -r requirements.txt   # einmalig: CustomTkinter
 python3 main.py
 ```
+
+Ist CustomTkinter nicht installiert, startet automatisch die klassische
+Tkinter-Oberfläche (`predict_app/gui_classic.py`).
 
 oder per Doppelklick auf `Predict Endpoint starten.command`.
 
