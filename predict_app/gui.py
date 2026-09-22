@@ -21,8 +21,11 @@ import customtkinter as ctk
 
 from . import __version__
 from .core import Project
-from .paths import (APP_NAME, bundled_coefficient_dir, default_project_dir,
-                    load_config, logo_file, save_config)
+from .paths import (APP_NAME, IS_MAC, IS_WINDOWS, bundled_coefficient_dir,
+                    default_project_dir, load_config, logo_file, save_config)
+
+FILE_MANAGER = "Finder" if IS_MAC else "Explorer"
+OPEN_WITH_VALUES = ["Numbers", "Excel", "Standardprogramm"] if IS_MAC else ["Excel", "Standardprogramm"]
 
 # --------------------------------------------------------------------------
 # Farben (hell, dunkel) – angelehnt an die iOS-Systemfarben
@@ -53,35 +56,43 @@ APPEARANCE_MAP = {"Hell": "light", "Dunkel": "dark", "Auto": "system"}
 
 def _font(size: int, weight: str = "normal", mono: bool = False) -> ctk.CTkFont:
     if mono:
-        family = "Menlo" if sys.platform == "darwin" else "Courier"
+        family = "Menlo" if IS_MAC else ("Consolas" if IS_WINDOWS else "DejaVu Sans Mono")
     else:
-        family = ".AppleSystemUIFont" if sys.platform == "darwin" else None
+        family = ".AppleSystemUIFont" if IS_MAC else ("Segoe UI" if IS_WINDOWS else None)
     if family:
         return ctk.CTkFont(family=family, size=size, weight=weight)
     return ctk.CTkFont(size=size, weight=weight)
 
 
 def open_path(path: Path, app: str | None = None) -> None:
-    """Öffnet eine Datei oder einen Ordner mit dem Finder bzw. einer App."""
+    """Öffnet eine Datei oder einen Ordner mit dem Finder/Explorer bzw. einer App."""
     path = Path(path)
-    if sys.platform == "darwin":
+    if IS_MAC:
         cmd = ["open"]
         if app:
             cmd += ["-a", app]
         cmd.append(str(path))
         subprocess.run(cmd, check=True)
-    elif sys.platform.startswith("win"):
+    elif IS_WINDOWS:
         import os
 
-        os.startfile(str(path))  # type: ignore[attr-defined]
+        if app:
+            # "start" findet registrierte Programme wie excel über die App Paths
+            subprocess.run(["cmd", "/c", "start", "", app, str(path)], check=True,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        else:
+            os.startfile(str(path))  # type: ignore[attr-defined]
     else:
         subprocess.run(["xdg-open", str(path)], check=True)
 
 
 def reveal_in_finder(path: Path) -> None:
+    """Zeigt die Datei im Finder bzw. Explorer an."""
     path = Path(path)
-    if sys.platform == "darwin":
+    if IS_MAC:
         subprocess.run(["open", "-R", str(path)], check=True)
+    elif IS_WINDOWS:
+        subprocess.run(["explorer", f"/select,{path}"])
     else:
         open_path(path.parent if path.is_file() else path)
 
@@ -96,6 +107,7 @@ class App(ctk.CTk):
 
         super().__init__(fg_color=BG)
         self.title(APP_NAME)
+        self._set_window_icon()
         self.geometry("900x900")
         self.minsize(760, 640)
 
@@ -107,7 +119,10 @@ class App(ctk.CTk):
         self.project = self._new_project(start_dir)
         self.project_var = tk.StringVar(value=str(self.project.base_dir))
         self.appearance_var = tk.StringVar(value=appearance)
-        self.open_with_var = tk.StringVar(value=config.get("open_with", "Numbers"))
+        open_with = config.get("open_with", OPEN_WITH_VALUES[0])
+        if open_with not in OPEN_WITH_VALUES:
+            open_with = OPEN_WITH_VALUES[0]
+        self.open_with_var = tk.StringVar(value=open_with)
 
         self.fonts = {
             "title": _font(28, "bold"),
@@ -131,9 +146,9 @@ class App(ctk.CTk):
 
     def _build_menu(self) -> None:
         menubar = tk.Menu(self)
-        mod_label = "Cmd" if sys.platform == "darwin" else "Ctrl"
+        mod_label = "Cmd" if IS_MAC else "Ctrl"
 
-        if sys.platform == "darwin":
+        if IS_MAC:
             app_menu = tk.Menu(menubar, name="apple", tearoff=0)
             app_menu.add_command(label=f"Über {APP_NAME}", command=self._show_about)
             menubar.add_cascade(menu=app_menu)
@@ -144,11 +159,13 @@ class App(ctk.CTk):
         file_menu.add_command(label="Messdateien hinzufügen…", command=self._add_input_files,
                               accelerator=f"{mod_label}+I")
         file_menu.add_separator()
-        file_menu.add_command(label="Projektordner im Finder zeigen", command=self._open_project_dir)
-        if sys.platform != "darwin":
+        file_menu.add_command(label=f"Projektordner im {FILE_MANAGER} zeigen",
+                              command=self._open_project_dir)
+        if not IS_MAC:
             file_menu.add_separator()
+            file_menu.add_command(label=f"Über {APP_NAME}", command=self._show_about)
             file_menu.add_command(label="Beenden", command=self._on_close)
-        menubar.add_cascade(label="Ablage", menu=file_menu)
+        menubar.add_cascade(label="Ablage" if IS_MAC else "Datei", menu=file_menu)
 
         run_menu = tk.Menu(menubar, tearoff=0)
         run_menu.add_command(label="Vorhersagen berechnen", command=self._run_predictions)
@@ -165,7 +182,7 @@ class App(ctk.CTk):
 
         self.configure(menu=menubar)
 
-        mod = "Command" if sys.platform == "darwin" else "Control"
+        mod = "Command" if IS_MAC else "Control"
         self.bind_all(f"<{mod}-o>", lambda e: self._choose_project_dir())
         self.bind_all(f"<{mod}-i>", lambda e: self._add_input_files())
         self.bind_all(f"<{mod}-r>", lambda e: self._run_all())
@@ -202,6 +219,22 @@ class App(ctk.CTk):
                              hover_color=FIELD, text_color=ACCENT,
                              text_color_disabled=LABEL_2,
                              font=self.fonts["body"], **kw)
+
+    def _set_window_icon(self) -> None:
+        """Fenster-/Taskleisten-Icon (Windows, Linux); macOS nutzt das Bundle-Icon."""
+        if IS_MAC:
+            return
+        try:
+            from PIL import Image, ImageTk
+
+            icon_png = bundled_coefficient_dir() / "icon_256.png"
+            if not icon_png.is_file():
+                icon_png = Path(__file__).resolve().parent.parent / "assets" / "icon_256.png"
+            if icon_png.is_file():
+                self._icon_image = ImageTk.PhotoImage(Image.open(icon_png))
+                self.iconphoto(True, self._icon_image)
+        except Exception:  # noqa: BLE001 – Icon ist optional
+            pass
 
     def _load_logo(self, height: int) -> ctk.CTkImage | None:
         path = logo_file()
@@ -269,7 +302,7 @@ class App(ctk.CTk):
         entry.bind("<FocusOut>", lambda e: self._set_project_dir(self.project_var.get()))
         self._tinted_button(proj, "Wählen…", self._choose_project_dir, width=100).grid(
             row=0, column=1, padx=(0, 8), pady=(16, 10))
-        self._tinted_button(proj, "Im Finder zeigen", self._open_project_dir, width=140).grid(
+        self._tinted_button(proj, f"Im {FILE_MANAGER} zeigen", self._open_project_dir, width=140).grid(
             row=0, column=2, padx=(0, 16), pady=(16, 10))
 
         status = ctk.CTkFrame(proj, fg_color="transparent")
@@ -342,7 +375,7 @@ class App(ctk.CTk):
                      text_color=LABEL, anchor="w").grid(row=0, column=0, padx=(16, 12),
                                                         pady=16, sticky="w")
         ctk.CTkSegmentedButton(
-            result, values=["Numbers", "Excel", "Standardprogramm"],
+            result, values=OPEN_WITH_VALUES,
             variable=self.open_with_var, command=self._on_open_with_change,
             corner_radius=RADIUS_CONTROL, height=32, fg_color=SEGMENT_BG,
             selected_color=CARD, selected_hover_color=CARD, unselected_color=SEGMENT_BG,
@@ -350,7 +383,7 @@ class App(ctk.CTk):
             border_width=3,
         ).grid(row=0, column=1, sticky="w", pady=16)
         self.result_buttons: list[ctk.CTkButton] = []
-        b = self._tinted_button(result, "Im Finder zeigen", self._reveal_csv, width=140)
+        b = self._tinted_button(result, f"Im {FILE_MANAGER} zeigen", self._reveal_csv, width=140)
         b.grid(row=0, column=2, padx=(8, 8), pady=16)
         self.result_buttons.append(b)
         b = self._primary_button(result, "Öffnen", self._open_csv, width=110, height=34)
@@ -543,8 +576,11 @@ class App(ctk.CTk):
         if csv_path is None:
             return
         choice = self.open_with_var.get()
-        app = {"Numbers": "Numbers", "Excel": "Microsoft Excel"}.get(choice)
-        if sys.platform != "darwin":
+        if IS_MAC:
+            app = {"Numbers": "Numbers", "Excel": "Microsoft Excel"}.get(choice)
+        elif IS_WINDOWS:
+            app = {"Excel": "excel"}.get(choice)
+        else:
             app = None
         try:
             open_path(csv_path, app=app)
