@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv/
+build/
+dist/
+.eggs/
+*.egg-info/
+.DS_Store
+
+# Messdaten und Ergebnisse bleiben lokal
+input_csv/*
+!input_csv/.gitkeep
+output/*
+!output/.gitkeep
+all_predict_lines_sorted.csv
+first_lines_summary.csv
