@@ -44,14 +44,26 @@ def bundled_coefficient_dir() -> Path:
     return repo_dir()
 
 
+def documents_project_dir() -> Path:
+    return Path.home() / "Documents" / APP_NAME
+
+
 def default_project_dir() -> Path:
     """Standard-Projektordner.
 
-    * gebündelte App: der Ordner, in dem die .app liegt
+    * gebündelte App in einem normalen Ordner: der Ordner, in dem die .app liegt
+    * gebündelte App in /Applications (oder einem nicht beschreibbaren Ordner):
+      ~/Documents/Predict Endpoint
     * Start aus dem Quellcode: der Repository-Ordner
     """
     bundle = app_bundle_dir()
     if bundle is not None:
+        in_applications = any(
+            str(bundle).startswith(prefix)
+            for prefix in ("/Applications", str(Path.home() / "Applications"))
+        )
+        if in_applications or not os.access(bundle, os.W_OK):
+            return documents_project_dir()
         return bundle
     return repo_dir()
 

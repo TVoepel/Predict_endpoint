@@ -42,9 +42,11 @@ Voraussetzung: Python 3 von [python.org](https://www.python.org/downloads/macos/
 ./build_app.sh
 ```
 
-Danach liegt `dist/Predict Endpoint.app` bereit. Die App kann an einen beliebigen
-Ort verschoben werden, z. B. nach `/Applications`. Als Projektordner nimmt sie
-zunächst den Ordner, in dem sie liegt; ein anderer lässt sich über „Wählen…“ setzen.
+Danach liegt `dist/Predict Endpoint.app` bereit. Zum Installieren die App nach
+`/Applications` ziehen (oder im Terminal `cp -R "dist/Predict Endpoint.app" /Applications/`).
+Liegt die App in `/Applications`, verwendet sie `~/Documents/Predict Endpoint` als
+Projektordner und legt ihn beim ersten Lauf an; liegt sie in einem anderen Ordner,
+nimmt sie diesen. Ein anderer Ordner lässt sich jederzeit über „Wählen…“ setzen.
 
 Beim ersten Start meldet macOS evtl. „Entwickler kann nicht verifiziert werden“:
 Rechtsklick auf die App → „Öffnen“.
