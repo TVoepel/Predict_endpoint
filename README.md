@@ -73,6 +73,11 @@ python3 extract_all_predict_lines_sorted.py     # sortierte CSV erzeugen
 python3 extract_first_lines.py                  # nur erste Zeilen zusammenfassen
 ```
 
+## App-Icon
+
+Das Icon liegt als `assets/icon.icns` (aus `assets/icon_1024.png`) bei und wird
+von py2app in die App übernommen; `assets/logo.png` erscheint in der Kopfzeile.
+
 ## Tests
 
 ```bash

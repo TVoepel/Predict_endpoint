@@ -24,11 +24,13 @@ for _, coeff_name, intercept_name, _ in SETTINGS:
 
 APP = ["main.py"]
 DATA_FILES: list = []
+RESOURCE_FILES = COEFF_FILES + [str(HERE / "assets" / "logo.png")]
 OPTIONS = {
     "argv_emulation": False,
-    "packages": ["predict_app", "customtkinter", "darkdetect"],
+    "packages": ["predict_app", "customtkinter", "darkdetect", "PIL"],
+    "iconfile": str(HERE / "assets" / "icon.icns"),
     "includes": ["tkinter"],
-    "resources": COEFF_FILES,
+    "resources": RESOURCE_FILES,
     "plist": {
         "CFBundleName": "Predict Endpoint",
         "CFBundleDisplayName": "Predict Endpoint",

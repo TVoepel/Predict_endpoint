@@ -22,7 +22,7 @@ import customtkinter as ctk
 from . import __version__
 from .core import Project
 from .paths import (APP_NAME, bundled_coefficient_dir, default_project_dir,
-                    load_config, save_config)
+                    load_config, logo_file, save_config)
 
 # --------------------------------------------------------------------------
 # Farben (hell, dunkel) – angelehnt an die iOS-Systemfarben
@@ -203,6 +203,19 @@ class App(ctk.CTk):
                              text_color_disabled=LABEL_2,
                              font=self.fonts["body"], **kw)
 
+    def _load_logo(self, height: int) -> ctk.CTkImage | None:
+        path = logo_file()
+        if path is None:
+            return None
+        try:
+            from PIL import Image
+
+            img = Image.open(path).convert("RGBA")
+            width = round(img.width * height / img.height)
+            return ctk.CTkImage(light_image=img, dark_image=img, size=(width, height))
+        except Exception:  # noqa: BLE001 – Logo ist optional
+            return None
+
     def _separator(self, parent) -> ctk.CTkFrame:
         return ctk.CTkFrame(parent, height=2, fg_color=SEPARATOR, corner_radius=0)
 
@@ -220,19 +233,23 @@ class App(ctk.CTk):
         # --- Kopfzeile ------------------------------------------------
         header = ctk.CTkFrame(root, fg_color="transparent")
         header.grid(row=row, column=0, sticky="ew", pady=(4, 16))
-        header.grid_columnconfigure(0, weight=1)
+        header.grid_columnconfigure(1, weight=1)
+        logo = self._load_logo(56)
+        if logo is not None:
+            ctk.CTkLabel(header, text="", image=logo).grid(
+                row=0, column=0, rowspan=2, sticky="w", padx=(0, 14))
         ctk.CTkLabel(header, text=APP_NAME, font=self.fonts["title"], text_color=LABEL,
-                     anchor="w").grid(row=0, column=0, sticky="w")
+                     anchor="w").grid(row=0, column=1, sticky="w")
         ctk.CTkLabel(header, text="Vorhersage-Auswertung von Messdateien",
                      font=self.fonts["subtitle"], text_color=LABEL_2,
-                     anchor="w").grid(row=1, column=0, sticky="w")
+                     anchor="w").grid(row=1, column=1, sticky="w")
         ctk.CTkSegmentedButton(
             header, values=APPEARANCE_VALUES, variable=self.appearance_var,
             command=self._on_appearance_change, corner_radius=RADIUS_CONTROL, height=30,
             fg_color=SEGMENT_BG, selected_color=CARD, selected_hover_color=CARD,
             unselected_color=SEGMENT_BG, unselected_hover_color=SEPARATOR,
             text_color=LABEL, font=self.fonts["small"], border_width=3,
-        ).grid(row=0, column=1, rowspan=2, sticky="e")
+        ).grid(row=0, column=2, rowspan=2, sticky="e")
         row += 1
 
         # --- Projektordner --------------------------------------------

@@ -68,6 +68,14 @@ def default_project_dir() -> Path:
     return repo_dir()
 
 
+def logo_file() -> Path | None:
+    """PNG-Logo für die Kopfzeile (App-Ressourcen oder assets/ im Repository)."""
+    for candidate in (bundled_coefficient_dir() / "logo.png", repo_dir() / "assets" / "logo.png"):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def config_file() -> Path:
     if sys.platform == "darwin":
         base = Path.home() / "Library" / "Application Support" / APP_NAME
