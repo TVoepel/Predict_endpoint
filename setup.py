@@ -5,9 +5,22 @@
 Das Ergebnis liegt danach in dist/Predict Endpoint.app
 """
 
+from pathlib import Path
+
 from setuptools import setup
 
 from predict_app import __version__
+from predict_app.core import SETTINGS
+
+HERE = Path(__file__).resolve().parent
+
+# Koeffizienten und Intercepts werden in die App eingebaut (Contents/Resources),
+# damit sie ohne weitere Einrichtung überall läuft.
+COEFF_FILES = []
+for _, coeff_name, intercept_name, _ in SETTINGS:
+    for name in (coeff_name, intercept_name):
+        if (HERE / name).is_file():
+            COEFF_FILES.append(str(HERE / name))
 
 APP = ["main.py"]
 DATA_FILES: list = []
@@ -15,6 +28,7 @@ OPTIONS = {
     "argv_emulation": False,
     "packages": ["predict_app"],
     "includes": ["tkinter"],
+    "resources": COEFF_FILES,
     "plist": {
         "CFBundleName": "Predict Endpoint",
         "CFBundleDisplayName": "Predict Endpoint",

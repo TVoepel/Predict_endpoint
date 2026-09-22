@@ -14,7 +14,8 @@ from tkinter import filedialog, messagebox, ttk
 
 from . import __version__
 from .core import Project
-from .paths import APP_NAME, default_project_dir, load_config, save_config
+from .paths import (APP_NAME, bundled_coefficient_dir, default_project_dir,
+                    load_config, save_config)
 
 PADX = 12
 PADY = 6
@@ -57,7 +58,7 @@ class App(tk.Tk):
         config = load_config()
         start_dir = config.get("project_dir") or str(default_project_dir())
         self.project_var = tk.StringVar(value=start_dir)
-        self.project = Project(start_dir)
+        self.project = Project(start_dir, fallback_coeff_dir=bundled_coefficient_dir())
 
         self._build_menu()
         self._build_widgets()
@@ -111,7 +112,7 @@ class App(tk.Tk):
         outer.pack(fill="both", expand=True)
 
         # --- Projektordner --------------------------------------------
-        proj = ttk.LabelFrame(outer, text="Projektordner (Koeffizienten, input_csv, output)")
+        proj = ttk.LabelFrame(outer, text="Projektordner (input_csv, output, Ergebnis-CSV)")
         proj.pack(fill="x", pady=(0, PADY))
 
         entry = ttk.Entry(proj, textvariable=self.project_var)
@@ -213,7 +214,7 @@ class App(tk.Tk):
         if self.project.base_dir == new.resolve():
             self._refresh_status()
             return
-        self.project = Project(new)
+        self.project = Project(new, fallback_coeff_dir=bundled_coefficient_dir())
         self.project_var.set(str(self.project.base_dir))
         save_config({"project_dir": str(self.project.base_dir)})
         self._refresh_status()
@@ -244,7 +245,12 @@ class App(tk.Tk):
             if missing:
                 lines.append("⚠️  Fehlende Koeffizienten-Dateien: " + ", ".join(missing))
             else:
-                lines.append("✅  Alle Koeffizienten-Dateien vorhanden.")
+                source = {
+                    "projekt": "aus dem Projektordner",
+                    "eingebaut": "in der App eingebaut",
+                    "gemischt": "teils Projektordner, teils in der App eingebaut",
+                }[p.coefficient_source()]
+                lines.append(f"✅  Koeffizienten-Dateien vorhanden ({source}).")
             n_in = len(p.input_files())
             n_out = len(p.output_files())
             lines.append(f"Input-Dateien: {n_in}    Output-Dateien: {n_out}    "

@@ -72,5 +72,5 @@ python setup.py py2app
 
 echo
 echo "Fertig: $(pwd)/dist/Predict Endpoint.app"
-echo "Die App in einen Ordner legen, der auch die Koeffizienten-Dateien enthält,"
-echo "oder den Projektordner in der App über „Wählen…“ auswählen."
+echo "Koeffizienten und Intercepts sind in die App eingebaut."
+echo "Die App kann an einen beliebigen Ort verschoben werden, z. B. /Applications."

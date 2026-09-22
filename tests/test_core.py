@@ -99,3 +99,45 @@ class ProjectTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FallbackCoefficientTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        root = Path(self._tmp.name)
+        self.bundle = root / "bundle"
+        self.bundle.mkdir()
+        write_coefficients(self.bundle, coeff_value=0.5, intercept=1.0)
+        self.base = root / "project"
+        self.base.mkdir()
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_empty_project_uses_bundled_coefficients(self):
+        project = Project(self.base, fallback_coeff_dir=self.bundle)
+        self.assertEqual(project.missing_coefficient_files(), [])
+        self.assertEqual(project.coefficient_source(), "eingebaut")
+        project.ensure_dirs()
+        write_measurement(project.input_dir / "DEVICE_ID_9.csv", [2.0] * 2000)
+        outputs = project.run_predictions()
+        self.assertEqual(len(outputs), 1)
+        first = outputs[0].read_text().splitlines()[0]
+        self.assertTrue(first.startswith("predict 300:"))
+        self.assertAlmostEqual(float(first.split(":")[1].split()[0]), 151 * 2.0 * 0.5 + 1.0)
+
+    def test_project_files_take_precedence(self):
+        # Projektordner hat eigene coeff_300 mit anderem Wert
+        write_coefficients(self.base, coeff_value=0.5, intercept=1.0)
+        with open(self.base / "coeff_300.csv", "w", newline="") as f:
+            w = csv.writer(f)
+            for _ in range(151):
+                w.writerow([2.0])
+        project = Project(self.base, fallback_coeff_dir=self.bundle)
+        self.assertEqual(project.coefficient_source(), "projekt")
+        self.assertEqual(project.coefficient_path("coeff_300.csv"), self.base / "coeff_300.csv")
+
+    def test_without_fallback_reports_missing(self):
+        project = Project(self.base)
+        self.assertEqual(len(project.missing_coefficient_files()), 8)
+        self.assertEqual(project.coefficient_source(), "fehlend")

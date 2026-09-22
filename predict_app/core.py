@@ -105,14 +105,26 @@ def get_predict(mess_file: Path, index_len: int, coef_file: Path, intercept_file
     return predicted_result + intercept
 
 
-def process_file(csv_file: Path, output_dir: Path, base_dir: Path) -> Path:
-    """Berechnet alle Vorhersagen einer Messdatei und schreibt die Output-Datei."""
+def process_file(
+    csv_file: Path,
+    output_dir: Path,
+    base_dir: Path,
+    resolve: Callable[[str], Path] | None = None,
+) -> Path:
+    """Berechnet alle Vorhersagen einer Messdatei und schreibt die Output-Datei.
+
+    ``resolve`` liefert den Pfad zu einer Koeffizienten-Datei anhand ihres
+    Namens; ohne Angabe wird sie direkt in ``base_dir`` erwartet.
+    """
+    if resolve is None:
+        resolve = lambda name: base_dir / name  # noqa: E731
+
     real_res = get_real_res(csv_file)
     results = []
 
     for index_len, coeff_name, intercept_name, label in SETTINGS:
         predicted_result = get_predict(
-            csv_file, index_len, base_dir / coeff_name, base_dir / intercept_name
+            csv_file, index_len, resolve(coeff_name), resolve(intercept_name)
         )
         err = abs(1 - predicted_result / real_res) * 100
         results.append(f"predict {label}:{predicted_result} err: {err}")
@@ -223,10 +235,19 @@ def extract_first_lines(output_dir: Path, output_csv: Path) -> int:
 # ---------------------------------------------------------------------------
 
 class Project:
-    """Ein Projektordner mit Koeffizienten, Eingabe- und Ausgabeordner."""
+    """Ein Projektordner mit Eingabe- und Ausgabeordner.
 
-    def __init__(self, base_dir: Path | str):
+    Koeffizienten-Dateien werden zuerst im Projektordner gesucht. Fehlen sie
+    dort, wird auf ``fallback_coeff_dir`` zurückgegriffen (z. B. die in die
+    App eingebauten Dateien). So kann ein Projektordner eigene Koeffizienten
+    mitbringen, muss es aber nicht.
+    """
+
+    def __init__(self, base_dir: Path | str, fallback_coeff_dir: Path | str | None = None):
         self.base_dir = Path(base_dir).expanduser().resolve()
+        self.fallback_coeff_dir = (
+            Path(fallback_coeff_dir).expanduser().resolve() if fallback_coeff_dir else None
+        )
 
     @property
     def input_dir(self) -> Path:
@@ -244,15 +265,38 @@ class Project:
     def first_lines_csv(self) -> Path:
         return self.base_dir / FIRST_LINES_CSV_NAME
 
-    def coefficient_files(self) -> list[Path]:
-        files = []
+    def coefficient_names(self) -> list[str]:
+        names = []
         for _, coeff_name, intercept_name, _ in SETTINGS:
-            files.append(self.base_dir / coeff_name)
-            files.append(self.base_dir / intercept_name)
-        return files
+            names.append(coeff_name)
+            names.append(intercept_name)
+        return names
+
+    def coefficient_path(self, name: str) -> Path:
+        """Pfad einer Koeffizienten-Datei: Projektordner vor Fallback-Ordner."""
+        local = self.base_dir / name
+        if local.is_file() or self.fallback_coeff_dir is None:
+            return local
+        fallback = self.fallback_coeff_dir / name
+        return fallback if fallback.is_file() else local
+
+    def coefficient_files(self) -> list[Path]:
+        return [self.coefficient_path(n) for n in self.coefficient_names()]
 
     def missing_coefficient_files(self) -> list[str]:
         return [p.name for p in self.coefficient_files() if not p.is_file()]
+
+    def coefficient_source(self) -> str:
+        """"projekt", "eingebaut", "gemischt" oder "fehlend"."""
+        files = self.coefficient_files()
+        if any(not p.is_file() for p in files):
+            return "fehlend"
+        local = sum(1 for p in files if p.parent == self.base_dir)
+        if local == len(files):
+            return "projekt"
+        if local == 0:
+            return "eingebaut"
+        return "gemischt"
 
     def ensure_dirs(self) -> None:
         self.base_dir.mkdir(parents=True, exist_ok=True)
@@ -324,7 +368,9 @@ class Project:
 
         outputs = []
         for csv_file in csv_files:
-            outputs.append(process_file(csv_file, self.output_dir, self.base_dir))
+            outputs.append(
+                process_file(csv_file, self.output_dir, self.base_dir, self.coefficient_path)
+            )
             log(f"Verarbeitet: {csv_file.name}")
 
         log(f"Ergebnisse gespeichert in: {self.output_dir}")

@@ -14,15 +14,13 @@ Mit „Schritte 2 + 3 ausführen“ laufen Berechnung und CSV-Erzeugung in einem
 
 ## Projektordner
 
-Die App arbeitet in einem **Projektordner**. Er enthält die Koeffizienten-Dateien
-und die beiden Unterordner für Ein- und Ausgabe:
+Die App arbeitet in einem **Projektordner** mit den beiden Unterordnern für
+Ein- und Ausgabe. Die Koeffizienten-Dateien sind in die gebaute App eingebaut;
+liegen sie zusätzlich im Projektordner, haben diese Vorrang (so lassen sich
+Koeffizienten ohne Neubau austauschen):
 
 ```
 Projektordner/
-├── coeff_300.csv     intercept_300.txt
-├── coeff_600.csv     intercept_600.txt
-├── coeff_1800.csv    intercept_1800.txt
-├── coeff_3599.csv    intercept_3599.txt
 ├── input_csv/                     ← Messdateien
 ├── output/                        ← *_output.txt
 └── all_predict_lines_sorted.csv   ← Ergebnis
@@ -30,8 +28,8 @@ Projektordner/
 
 Standardmäßig ist das der Ordner, in dem die App liegt (bzw. dieses Repository beim
 Start aus dem Quellcode). Über „Wählen…“ kann ein anderer Ordner gesetzt werden; die
-Auswahl wird gespeichert. Fehlende Koeffizienten-Dateien zeigt die App direkt unter
-dem Ordnerpfad an.
+Auswahl wird gespeichert. Die Statuszeile unter dem Ordnerpfad zeigt, ob die
+Koeffizienten aus der App oder aus dem Projektordner stammen.
 
 ## App erstellen (macOS)
 
@@ -42,9 +40,9 @@ Voraussetzung: Python 3 von [python.org](https://www.python.org/downloads/macos/
 ./build_app.sh
 ```
 
-Danach liegt `dist/Predict Endpoint.app` bereit. Die App in den Projektordner
-neben die Koeffizienten-Dateien legen (oder in `/Applications` und den Projektordner
-in der App wählen).
+Danach liegt `dist/Predict Endpoint.app` bereit. Die App kann an einen beliebigen
+Ort verschoben werden, z. B. nach `/Applications`. Als Projektordner nimmt sie
+zunächst den Ordner, in dem sie liegt; ein anderer lässt sich über „Wählen…“ setzen.
 
 Beim ersten Start meldet macOS evtl. „Entwickler kann nicht verifiziert werden“:
 Rechtsklick auf die App → „Öffnen“.

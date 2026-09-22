@@ -32,6 +32,18 @@ def repo_dir() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
+def bundled_coefficient_dir() -> Path:
+    """Ordner mit den in die App eingebauten Koeffizienten-Dateien.
+
+    * gebündelte App: Contents/Resources der .app
+    * Start aus dem Quellcode: der Repository-Ordner
+    """
+    resource_path = os.environ.get("RESOURCEPATH")
+    if resource_path and Path(resource_path).is_dir():
+        return Path(resource_path)
+    return repo_dir()
+
+
 def default_project_dir() -> Path:
     """Standard-Projektordner.
 
